@@ -1,0 +1,154 @@
+.profile-page { display: flex; flex-direction: column; gap: 22px; }
+
+.profile-cover {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.75);
+}
+
+.cover-edit {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 12.5px;
+  padding: 8px 14px;
+  background: rgba(7,8,12,0.55);
+}
+
+.profile-id-row {
+  position: absolute;
+  bottom: -2px;
+  left: 28px;
+  transform: translateY(50%);
+}
+
+.profile-avatar-wrap { position: relative; }
+
+.avatar-edit-btn {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  background: var(--grad);
+  color: #07080c;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+}
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 64px 8px 0;
+}
+
+.profile-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.profile-heading h1 { font-size: 28px; }
+.profile-handle { font-family: var(--mono); font-size: 13px; color: var(--text-faint); margin-top: 4px; }
+.profile-role { font-size: 14.5px; color: var(--text-dim); margin-top: 6px; }
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 32px;
+  text-align: left;
+  padding: 4px 0 8px;
+}
+.profile-stats > div { display: flex; flex-direction: column; }
+.profile-stats strong { font-family: var(--display); font-size: 22px; color: var(--text); }
+.profile-stats span { font-size: 12.5px; color: var(--text-faint); }
+
+.profile-section {
+  padding: 22px;
+  text-align: left;
+}
+
+.profile-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.profile-bio { font-size: 14.5px; line-height: 1.6; }
+
+.profile-section textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.profile-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.profile-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-niche-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+}
+
+.profile-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-socials a { display: inline-flex; }
+
+.profile-brand-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.profile-brand-grid p { font-size: 14px; color: var(--text); margin-top: 4px; }
+
+@media (max-width: 700px) {
+  .profile-brand-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .profile-heading { flex-direction: column; gap: 10px; }
+  .profile-stats { gap: 20px; }
+}

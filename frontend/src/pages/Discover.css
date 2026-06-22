@@ -1,0 +1,27 @@
+.discover-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  text-align: left;
+}
+.discover-page h1 { font-size: 26px; }
+
+.discover-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.discover-filters .btn { padding: 8px 16px; font-size: 13px; }
+
+.discover-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .discover-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 700px) {
+  .discover-grid { grid-template-columns: 1fr; }
+}

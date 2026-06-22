@@ -1,0 +1,41 @@
+.feed-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  text-align: left;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.feed-page h1 { font-size: 26px; }
+
+.composer {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+}
+
+.composer-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.composer-body textarea {
+  width: 100%;
+  resize: none;
+  font-size: 14.5px;
+}
+
+.composer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
