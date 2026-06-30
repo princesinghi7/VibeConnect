@@ -4,13 +4,19 @@ import type { Connection } from '../api/types';
 import { setConnectionStatus } from '../api/services';
 import './ConnectionCard.css';
 
-export default function ConnectionCard({ connection }: { connection: Connection }) {
+export default function ConnectionCard({
+  connection, onStatusChange,
+}: {
+  connection: Connection;
+  onStatusChange?: (id: string, status: Connection['status']) => void;
+}) {
   const [status, setStatus] = useState(connection.status);
   const [busy, setBusy] = useState(false);
 
   async function act(next: Connection['status']) {
     setBusy(true);
     setStatus(next);
+    onStatusChange?.(connection.id, next);
     try {
       await setConnectionStatus(connection.id, next);
     } finally {
@@ -34,11 +40,19 @@ export default function ConnectionCard({ connection }: { connection: Connection 
       </div>
 
       <div className="conn-actions">
-        {status === 'connected' && <button className="btn btn-ghost" disabled>Connected</button>}
-        {status === 'pending' && <button className="btn btn-ghost" disabled={busy}>Pending</button>}
+        {status === 'connected' && (
+          <button className="btn btn-ghost" disabled={busy} onClick={() => act('suggested')}>
+            Connected · Disconnect
+          </button>
+        )}
+        {status === 'pending' && (
+          <button className="btn btn-ghost conn-cancel" disabled={busy} onClick={() => act('suggested')}>
+            {busy ? 'Cancelling…' : 'Cancel request'}
+          </button>
+        )}
         {status === 'suggested' && (
           <button className="btn btn-primary" disabled={busy} onClick={() => act('pending')}>
-            Connect
+            {busy ? 'Sending…' : 'Connect'}
           </button>
         )}
       </div>

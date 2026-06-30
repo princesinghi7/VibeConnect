@@ -1,34 +1,86 @@
 import { useEffect, useRef, useState } from 'react';
 import Avatar from '../components/Avatar';
+import YoutubeStatsCard from '../components/YoutubeStatsCard';
+import InstagramEmbed from '../components/InstagramEmbed';
+import FacebookPagePlugin from '../components/FacebookPagePlugin';
 import { useAuth } from '../hooks/useAuth';
 import { updateProfile } from '../api/services';
 import './Profile.css';
+
+function youtubeHandleFromUrl(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/@([\w.-]+)/);
+  return match ? match[1] : null;
+}
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(user?.bio ?? '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => setBio(user?.bio ?? ''), [user?.bio]);
 
   if (!user) return null;
 
+  function showToast(message: string, type: 'success' | 'error' = 'success') {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }
+
   function handlePhotoPick(kind: 'avatarUrl' | 'coverUrl') {
     fileInput.current?.setAttribute('data-target', kind);
     fileInput.current?.click();
   }
 
-  function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     const target = e.target.getAttribute('data-target') as 'avatarUrl' | 'coverUrl' | null;
-    if (!file || !target) return;
-    const url = URL.createObjectURL(file);
-    const patch = { [target]: url } as Partial<import('../api/types').User>;
-    updateUser(patch);
-    updateProfile(patch);
-    e.target.value = '';
+    if (!file || !target || !user) return;
+
+    // Local preview URL
+    const previewUrl = URL.createObjectURL(file);
+    const originalUrl = target === 'avatarUrl' ? user.avatarUrl : user.coverUrl;
+
+    // Optimistic UI update
+    updateUser({ [target]: previewUrl });
+    setUploading(true);
+    showToast('Uploading image...', 'success');
+
+    try {
+      const token = localStorage.getItem('vc_token');
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type,
+          'Authorization': `Bearer ${token}`,
+        },
+        body: file,
+      });
+
+      if (!res.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await res.json();
+      const finalUrl = data.url;
+
+      // Update in API database
+      const updated = await updateProfile({ [target]: finalUrl });
+      updateUser(updated);
+      showToast('Profile updated successfully!');
+    } catch (err) {
+      console.error(err);
+      // Revert optimistic change
+      updateUser({ [target]: originalUrl });
+      showToast('Upload failed. Please try again.', 'error');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   }
 
   async function saveBio() {
@@ -37,6 +89,9 @@ export default function Profile() {
       const updated = await updateProfile({ bio });
       updateUser(updated);
       setEditing(false);
+      showToast('Bio updated!');
+    } catch {
+      showToast('Failed to update bio.', 'error');
     } finally {
       setSaving(false);
     }
@@ -44,20 +99,35 @@ export default function Profile() {
 
   return (
     <div className="profile-page">
+      {toast && (
+        <div className={`toast-notification toast-${toast.type}`}>
+          {toast.message}
+        </div>
+      )}
       <input ref={fileInput} type="file" accept="image/*" hidden onChange={onFileChosen} />
 
       <div className="profile-cover glass">
         <img src={user.coverUrl} alt="" className="cover-img" />
-        <button className="btn btn-ghost cover-edit" onClick={() => handlePhotoPick('coverUrl')}>
-          Change cover
-        </button>
+        {uploading ? (
+          <div className="cover-loading-overlay">Uploading...</div>
+        ) : (
+          <button className="btn btn-ghost cover-edit" onClick={() => handlePhotoPick('coverUrl')}>
+            Change cover
+          </button>
+        )}
 
         <div className="profile-id-row">
           <div className="profile-avatar-wrap">
-            <Avatar src={user.avatarUrl} name={user.name} size={104} status={user.status} ring />
-            <button className="avatar-edit-btn" onClick={() => handlePhotoPick('avatarUrl')} aria-label="Change profile photo">
-              ✎
-            </button>
+            <Avatar src={user.avatarUrl} name={user.name} size={120} status={user.status} ring />
+            {uploading ? (
+              <div className="avatar-loading-overlay">
+                <span className="spinner" />
+              </div>
+            ) : (
+              <button className="avatar-edit-btn" onClick={() => handlePhotoPick('avatarUrl')} aria-label="Change profile photo">
+                ✎
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -118,20 +188,21 @@ export default function Profile() {
         {user.accountType === 'creator' && (
           <section className="profile-section glass">
             <h2>Socials</h2>
-            <div className="profile-socials">
-              {user.socials?.instagram && (
-                <a href={user.socials.instagram} target="_blank" rel="noreferrer" className="tag">Instagram</a>
-              )}
-              {user.socials?.youtube && (
-                <a href={user.socials.youtube} target="_blank" rel="noreferrer" className="tag">YouTube</a>
-              )}
-              {user.socials?.facebook && (
-                <a href={user.socials.facebook} target="_blank" rel="noreferrer" className="tag">Facebook</a>
-              )}
-              {!user.socials?.instagram && !user.socials?.youtube && !user.socials?.facebook && (
-                <p className="eyebrow">No social links added yet.</p>
-              )}
-            </div>
+            {!user.socials?.instagram && !user.socials?.youtube && !user.socials?.facebook ? (
+              <p className="eyebrow">No social links added yet.</p>
+            ) : (
+              <div className="profile-social-embeds">
+                {user.socials?.youtube && youtubeHandleFromUrl(user.socials.youtube) && (
+                  <YoutubeStatsCard handle={youtubeHandleFromUrl(user.socials.youtube)!} url={user.socials.youtube} />
+                )}
+                {user.socials?.instagram && (
+                  <InstagramEmbed postUrl={user.socials.instagramPostUrl} profileUrl={user.socials.instagram} />
+                )}
+                {user.socials?.facebook && (
+                  <FacebookPagePlugin pageUrl={user.socials.facebook} />
+                )}
+              </div>
+            )}
           </section>
         )}
 

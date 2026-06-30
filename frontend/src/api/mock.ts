@@ -12,7 +12,7 @@ export const mockMe: User = {
   name: 'Prince Singh',
   handle: '@princesinghofficial',
   avatarUrl: '/prince-singh.jpg',
-  coverUrl: photo(101),
+  coverUrl: '/prince-singh.jpg',
   role: 'Content Creator · Relatable Content',
   location: 'Vadodara, Gujarat, IN',
   bio: 'Creating relatable content people actually see themselves in. Building my creator business in public — reels, stories, and real conversations with my audience.',
@@ -62,26 +62,36 @@ export const mockUsers: User[] = [
 
 export const mockBrands: User[] = [
   {
-    id: 'b1', accountType: 'brand', name: 'Nova Skincare', handle: '@nova.skincare', avatarUrl: avatar('nova-skincare'),
-    coverUrl: photo(301), role: 'Skincare & Beauty Brand', location: 'Mumbai, IN',
-    bio: 'Clean, dermat-backed skincare for everyday Indian skin.', stats: { connections: 60, projects: 14, posts: 30 },
-    skills: [], status: 'online', companyName: 'Nova Skincare', industry: 'Beauty & Skincare',
+    id: 'b1', accountType: 'brand', name: 'Mamaearth', handle: '@mamaearth', avatarUrl: avatar('mamaearth'),
+    coverUrl: photo(301), role: 'Personal Care & Beauty Brand', location: 'Gurugram, IN',
+    bio: 'Toxin-free, natural personal care products for everyday Indian households.', stats: { connections: 60, projects: 14, posts: 30 },
+    skills: [], status: 'online', companyName: 'Mamaearth', industry: 'Beauty & Personal Care',
     budgetRange: '₹20,000 – ₹80,000 / campaign', targetNiches: ['Lifestyle', 'Beauty', 'Relatable Content'],
-    website: 'https://novaskincare.example.com',
+    website: 'https://mamaearth.in',
   },
   {
-    id: 'b2', accountType: 'brand', name: 'Flux Energy', handle: '@flux.energy', avatarUrl: avatar('flux-energy'),
-    coverUrl: photo(302), role: 'Sports Nutrition Brand', location: 'Bengaluru, IN',
-    bio: 'Performance drinks for people who actually train.', stats: { connections: 40, projects: 9, posts: 22 },
-    skills: [], status: 'online', companyName: 'Flux Energy', industry: 'Sports Nutrition',
-    budgetRange: '₹15,000 – ₹50,000 / campaign', targetNiches: ['Fitness', 'Tech'],
+    id: 'b2', accountType: 'brand', name: 'boAt', handle: '@boat', avatarUrl: avatar('boat-lifestyle'),
+    coverUrl: photo(302), role: 'Audio & Wearables Brand', location: 'Mumbai, IN',
+    bio: 'India\u2019s homegrown audio and wearables brand, built for the young and the restless.', stats: { connections: 40, projects: 9, posts: 22 },
+    skills: [], status: 'online', companyName: 'boAt', industry: 'Consumer Electronics',
+    budgetRange: '₹15,000 – ₹60,000 / campaign', targetNiches: ['Tech', 'Fitness', 'Relatable Content'],
+    website: 'https://www.boat-lifestyle.com',
   },
   {
-    id: 'b3', accountType: 'brand', name: 'Looped App', handle: '@looped.app', avatarUrl: avatar('looped-app'),
-    coverUrl: photo(303), role: 'Consumer Tech Startup', location: 'Gurugram, IN',
-    bio: 'A social app for people who hate small talk.', stats: { connections: 28, projects: 5, posts: 16 },
-    skills: [], status: 'building', companyName: 'Looped', industry: 'Consumer Tech',
-    budgetRange: '₹10,000 – ₹40,000 / campaign', targetNiches: ['Tech', 'Relatable Content', 'Comedy'],
+    id: 'b3', accountType: 'brand', name: 'Zomato', handle: '@zomato', avatarUrl: avatar('zomato'),
+    coverUrl: photo(303), role: 'Food Delivery & Dining', location: 'Gurugram, IN',
+    bio: 'Discovering and delivering great food, one order at a time.', stats: { connections: 28, projects: 5, posts: 16 },
+    skills: [], status: 'building', companyName: 'Zomato', industry: 'Food & Beverage',
+    budgetRange: '₹10,000 – ₹45,000 / campaign', targetNiches: ['Relatable Content', 'Comedy', 'Lifestyle'],
+    website: 'https://www.zomato.com',
+  },
+  {
+    id: 'b4', accountType: 'brand', name: 'Swiggy', handle: '@swiggy', avatarUrl: avatar('swiggy'),
+    coverUrl: photo(304), role: 'Food & Quick Commerce', location: 'Bengaluru, IN',
+    bio: 'On-demand food delivery and quick commerce, powering everyday convenience.', stats: { connections: 35, projects: 11, posts: 19 },
+    skills: [], status: 'online', companyName: 'Swiggy', industry: 'Food & Quick Commerce',
+    budgetRange: '₹12,000 – ₹50,000 / campaign', targetNiches: ['Relatable Content', 'Comedy', 'Tech'],
+    website: 'https://www.swiggy.com',
   },
 ];
 
@@ -154,24 +164,30 @@ export const mockBrandCards: BrandCard[] = mockBrands.map((b) => ({
 
 export const mockCampaigns: Campaign[] = [
   {
-    id: 'cm1', brandId: 'b1', brandName: 'Nova Skincare', brandLogo: avatar('nova-skincare'),
-    title: 'Get-Ready-With-Me featuring Nova Glow Serum', description: 'Looking for relatable / lifestyle creators to feature our new Glow Serum in a GRWM-style reel.',
+    id: 'cm1', brandId: 'b1', brandName: 'Mamaearth', brandLogo: avatar('mamaearth'),
+    title: 'Get-Ready-With-Me featuring Mamaearth Glow Serum', description: 'Looking for relatable / lifestyle creators to feature our new Glow Serum in a GRWM-style reel.',
     niche: 'Relatable Content', budget: '₹35,000', deliverables: '1 Instagram Reel + 2 Stories', platform: 'Instagram',
     deadline: '2026-07-10', status: 'open',
     applicants: [{ creatorId: 'u1', creatorName: 'Priya Nair', creatorAvatar: avatar('priya-nair'), appliedAt: '2026-06-18T10:00:00Z', status: 'applied' }],
   },
   {
-    id: 'cm2', brandId: 'b2', brandName: 'Flux Energy', brandLogo: avatar('flux-energy'),
-    title: 'Pre-workout honest review', description: 'Fitness creators to do an honest taste + performance review of our new pre-workout mix.',
-    niche: 'Fitness', budget: '₹20,000', deliverables: '1 YouTube Short + 1 Instagram Reel', platform: 'Multi-platform',
+    id: 'cm2', brandId: 'b2', brandName: 'boAt', brandLogo: avatar('boat-lifestyle'),
+    title: 'Honest review: new boAt earbuds', description: 'Tech/fitness creators to do an honest unboxing + performance review of our newest earbuds.',
+    niche: 'Tech', budget: '₹20,000', deliverables: '1 YouTube Short + 1 Instagram Reel', platform: 'Multi-platform',
     deadline: '2026-07-05', status: 'open', applicants: [],
   },
   {
-    id: 'cm3', brandId: 'b3', brandName: 'Looped', brandLogo: avatar('looped-app'),
-    title: 'Relatable skit: \u201cWhen group chats go silent\u201d', description: 'Comedy/relatable creators to make a skit weaving in the Looped app naturally.',
+    id: 'cm3', brandId: 'b3', brandName: 'Zomato', brandLogo: avatar('zomato'),
+    title: 'Relatable skit: \u201cWhen the food is 2 hours late\u201d', description: 'Comedy/relatable creators to make a skit weaving in the Zomato app naturally.',
     niche: 'Relatable Content', budget: '₹18,000', deliverables: '1 Instagram Reel', platform: 'Instagram',
     deadline: '2026-06-30', status: 'open',
     applicants: [{ creatorId: 'me', creatorName: 'Prince Singh', creatorAvatar: '/prince-singh.jpg', appliedAt: '2026-06-19T09:00:00Z', status: 'shortlisted' }],
+  },
+  {
+    id: 'cm4', brandId: 'b4', brandName: 'Swiggy', brandLogo: avatar('swiggy'),
+    title: '10-minute delivery, real reactions', description: 'Relatable/comedy creators to react in real time to how fast their order shows up.',
+    niche: 'Relatable Content', budget: '₹16,000', deliverables: '1 Instagram Reel', platform: 'Instagram',
+    deadline: '2026-07-08', status: 'open', applicants: [],
   },
 ];
 

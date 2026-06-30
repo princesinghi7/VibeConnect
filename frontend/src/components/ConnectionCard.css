@@ -30,6 +30,12 @@
   color: var(--text-faint);
 }
 
+.conn-cancel:hover {
+  border-color: rgba(251,113,133,0.4);
+  color: var(--danger);
+  background: rgba(251,113,133,0.08);
+}
+
 .conn-actions {
   flex-shrink: 0;
 }

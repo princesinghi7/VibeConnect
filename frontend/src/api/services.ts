@@ -5,10 +5,29 @@ import {
 } from './mock';
 import type {
   User, Post, Connection, ChatThread, ChatMessage, AccountType,
-  CreatorCard, BrandCard, Campaign, RateCardItem, PortfolioItem, AiChatMessage,
+  CreatorCard, BrandCard, Campaign, RateCardItem, PortfolioItem, AiChatMessage, AiProvider, YoutubeStats,
 } from './types';
 
 const delay = (ms = 280) => new Promise((r) => setTimeout(r, ms));
+
+// Lightweight per-browser cache so demo-mode edits (rate card, portfolio) survive
+// page reloads even when there's no backend running to persist them.
+const LS_PREFIX = 'vc_cache:';
+function lsGet<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(`${LS_PREFIX}${key}`);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+function lsSet<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(`${LS_PREFIX}${key}`, JSON.stringify(value));
+  } catch {
+    /* storage unavailable — ignore */
+  }
+}
 
 /** Calls the real backend; on any failure (offline, 404, etc.) resolves with mock data instead,
  *  so the UI always has something real-looking to show during a demo. */
@@ -27,10 +46,12 @@ export async function login(email: string, password: string) {
     async () => {
       const res = await api.post<{ token: string; user: User }>('/auth/login', { email, password });
       setToken(res.token);
+      lsSet('profile', res.user);
       return res.user;
     },
     () => {
       setToken('demo-token');
+      lsSet('profile', mockMe);
       return mockMe;
     },
   );
@@ -41,20 +62,22 @@ export async function signup(name: string, email: string, password: string, acco
     async () => {
       const res = await api.post<{ token: string; user: User }>('/auth/signup', { name, email, password, accountType });
       setToken(res.token);
+      lsSet('profile', res.user);
       return res.user;
     },
     () => {
       setToken('demo-token');
       const handle = `@${name.toLowerCase().replace(/\s+/g, '.')}`;
-      if (accountType === 'brand') {
-        return {
+      const user = accountType === 'brand'
+        ? {
           ...mockMe, accountType, name, handle, companyName: name,
           role: 'New brand on VibeConnect', bio: 'Just joined VibeConnect — looking for the right creators.',
           industry: '', budgetRange: '', targetNiches: [], niche: undefined, followers: undefined,
           engagementRate: undefined, socials: undefined,
-        } as User;
-      }
-      return { ...mockMe, name, handle, role: 'New creator on VibeConnect', bio: 'Just joined VibeConnect.' };
+        } as User
+        : { ...mockMe, name, handle, role: 'New creator on VibeConnect', bio: 'Just joined VibeConnect.' };
+      lsSet('profile', user);
+      return user;
     },
   );
 }
@@ -63,17 +86,54 @@ export function logout() {
   setToken(null);
 }
 
+export async function loginWithGoogle(idToken: string, accountType: AccountType = 'creator'): Promise<User> {
+  return withFallback(
+    async () => {
+      const res = await api.post<{ token: string; user: User }>('/auth/google', { idToken, accountType });
+      setToken(res.token);
+      lsSet('profile', res.user);
+      return res.user;
+    },
+    () => {
+      setToken('demo-token');
+      lsSet('profile', mockMe);
+      return mockMe;
+    },
+  );
+}
+
+// ---- Social: live YouTube stats ----
+export async function getYoutubeStats(handle: string): Promise<YoutubeStats> {
+  try {
+    return await api.get<YoutubeStats>(`/social/youtube?handle=${encodeURIComponent(handle)}`);
+  } catch {
+    return { connected: false, message: 'Backend not reachable — start it to show live YouTube stats.' };
+  }
+}
+
 // ---- Profile ----
 export async function getProfile(userId = 'me'): Promise<User> {
+  const cachedProfile = lsGet<User>('profile');
   if (userId === 'me' || userId === mockMe.id) {
-    return withFallback(() => api.get<User>('/users/me'), mockMe);
+    return withFallback(() => api.get<User>('/users/me'), cachedProfile ?? mockMe);
   }
   const found = mockUsers.find((u) => u.id === userId) ?? mockMe;
   return withFallback(() => api.get<User>(`/users/${userId}`), found);
 }
 
 export async function updateProfile(patch: Partial<User>): Promise<User> {
-  return withFallback(() => api.patch<User>('/users/me', patch), { ...mockMe, ...patch });
+  return withFallback(
+    async () => {
+      const updated = await api.patch<User>('/users/me', patch);
+      lsSet('profile', updated);
+      return updated;
+    },
+    () => {
+      const updated = { ...(lsGet<User>('profile') ?? mockMe), ...patch };
+      lsSet('profile', updated);
+      return updated;
+    },
+  );
 }
 
 // ---- Feed ----
@@ -81,13 +141,13 @@ export async function getFeed(): Promise<Post[]> {
   return withFallback(() => api.get<Post[]>('/posts'), mockPosts);
 }
 
-export async function createPost(content: string, tag?: string): Promise<Post> {
+export async function createPost(content: string, tag?: string, imageUrl?: string): Promise<Post> {
   const optimistic: Post = {
     id: `p${Date.now()}`,
     author: { id: mockMe.id, name: mockMe.name, handle: mockMe.handle, avatarUrl: mockMe.avatarUrl, role: mockMe.role },
-    content, tag, createdAt: new Date().toISOString(), likes: 0, liked: false, comments: [],
+    content, tag, imageUrl, createdAt: new Date().toISOString(), likes: 0, liked: false, comments: [],
   };
-  return withFallback(() => api.post<Post>('/posts', { content, tag }), optimistic);
+  return withFallback(() => api.post<Post>('/posts', { content, tag, imageUrl }), optimistic);
 }
 
 export async function toggleLike(postId: string, liked: boolean): Promise<{ liked: boolean; likes: number }> {
@@ -166,16 +226,19 @@ export async function setApplicantStatus(campaignId: string, creatorId: string, 
 
 // ---- Rate card ----
 export async function getRateCard(): Promise<RateCardItem[]> {
-  return withFallback(() => api.get<RateCardItem[]>('/users/me/ratecard'), mockRateCard);
+  const cached = lsGet<RateCardItem[]>('ratecard');
+  return withFallback(() => api.get<RateCardItem[]>('/users/me/ratecard'), () => cached ?? mockRateCard);
 }
 
 export async function saveRateCard(items: RateCardItem[]): Promise<RateCardItem[]> {
+  lsSet('ratecard', items);
   return withFallback(() => api.put<RateCardItem[]>('/users/me/ratecard', { items }), items);
 }
 
 // ---- Portfolio / media kit ----
 export async function getPortfolio(): Promise<PortfolioItem[]> {
-  return withFallback(() => api.get<PortfolioItem[]>('/users/me/portfolio'), mockPortfolio);
+  const cached = lsGet<PortfolioItem[]>('portfolio');
+  return withFallback(() => api.get<PortfolioItem[]>('/users/me/portfolio'), () => cached ?? mockPortfolio);
 }
 
 export async function addPortfolioItem(item: Partial<PortfolioItem>): Promise<PortfolioItem> {
@@ -183,7 +246,10 @@ export async function addPortfolioItem(item: Partial<PortfolioItem>): Promise<Po
     id: `pf${Date.now()}`, title: item.title ?? 'Untitled', brand: item.brand ?? 'Personal',
     imageUrl: item.imageUrl ?? 'https://picsum.photos/seed/500/640/360', metric: item.metric ?? '',
   };
-  return withFallback(() => api.post<PortfolioItem>('/users/me/portfolio', item), optimistic);
+  const result = await withFallback(() => api.post<PortfolioItem>('/users/me/portfolio', item), optimistic);
+  const updatedList = [...(lsGet<PortfolioItem[]>('portfolio') ?? mockPortfolio), result];
+  lsSet('portfolio', updatedList);
+  return result;
 }
 
 // ---- Analytics ----
@@ -198,14 +264,16 @@ export async function getAnalytics() {
   ]);
 }
 
-// ---- AI Assistant (Claude) ----
-export async function sendAiMessage(history: AiChatMessage[]): Promise<AiChatMessage> {
+// ---- AI Assistant (Claude / Grok) ----
+export async function sendAiMessage(history: AiChatMessage[], provider: AiProvider = 'claude'): Promise<AiChatMessage> {
   return withFallback(
-    () => api.post<AiChatMessage>('/ai/chat', { messages: history }),
+    () => api.post<AiChatMessage>('/ai/chat', { messages: history, provider }),
     () => ({
       role: 'assistant' as const,
       content:
-        "I'm running in demo mode right now (no backend connected), so I can't give a live AI reply — but once the backend is running with an ANTHROPIC_API_KEY set, I'll answer for real. In the meantime: for profile tips, lead with your niche and your best metric in the bio; for campaign briefs, always include deliverables, deadline, and budget upfront.",
+        provider === 'grok'
+          ? "I'm running in demo mode right now (no backend connected), so I can't give a live Grok reply — once the backend is running with an XAI_API_KEY set, I'll answer for real."
+          : "I'm running in demo mode right now (no backend connected), so I can't give a live Claude reply — once the backend is running with an ANTHROPIC_API_KEY set, I'll answer for real. In the meantime: for profile tips, lead with your niche and your best metric in the bio; for campaign briefs, always include deliverables, deadline, and budget upfront.",
     }),
   );
 }

@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import express, { type Request } from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { OAuth2Client } from 'google-auth-library';
 import {
   users, posts, connections, threadParticipants, messages,
   campaigns, rateCards, portfolios, analytics, publicUser,
@@ -11,8 +14,11 @@ import { makeToken, requireAuth } from './auth';
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 type AuthedRequest = Request & { userId: string };
+
+const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
 // ---------- Auth ----------
 app.post('/api/auth/login', (req, res) => {
@@ -47,6 +53,80 @@ app.post('/api/auth/signup', (req, res) => {
   res.status(201).json({ token: makeToken(id), user: publicUser(newUser) });
 });
 
+app.post('/api/auth/google', async (req, res) => {
+  const { idToken, accountType } = req.body ?? {};
+  if (!idToken) return res.status(400).json({ message: 'idToken is required' });
+
+  // Handle Offline/Demo Mock Google Tokens
+  if (idToken.startsWith('google-demo:')) {
+    const parts = idToken.split(':');
+    const email = parts[1];
+    const name = parts[2] || email.split('@')[0];
+
+    let user = users.find((u) => u.email === email);
+
+    if (!user) {
+      const type: AccountType = accountType === 'brand' ? 'brand' : 'creator';
+      const id = `${type === 'brand' ? 'b' : 'u'}${Date.now()}`;
+      const handle = `@${name.toLowerCase().replace(/\s+/g, '.')}`;
+      const avatarUrl = `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(handle)}`;
+
+      const base = {
+        id, accountType: type, name, handle, avatarUrl,
+        coverUrl: 'https://picsum.photos/seed/300/640/360',
+        location: '', stats: { connections: 0, projects: 0, posts: 0 },
+        skills: [] as string[], status: 'online' as const, email, password: '',
+      };
+
+      user = type === 'brand'
+        ? { ...base, role: 'New brand on VibeConnect', bio: 'Just joined VibeConnect — looking for the right creators.', companyName: name, industry: '', budgetRange: '', targetNiches: [] as string[] }
+        : { ...base, role: 'New creator on VibeConnect', bio: 'Just joined VibeConnect.', niche: '', followers: 0, engagementRate: 0, socials: {} };
+
+      users.push(user);
+    }
+
+    return res.json({ token: makeToken(user.id), user: publicUser(user) });
+  }
+
+  if (!googleClient) {
+    return res.status(503).json({ message: 'Google Sign-In is not configured on this server (missing GOOGLE_CLIENT_ID).' });
+  }
+
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.email) return res.status(401).json({ message: 'Could not verify Google account' });
+
+    let user = users.find((u) => u.email === payload.email);
+
+    if (!user) {
+      const type: AccountType = accountType === 'brand' ? 'brand' : 'creator';
+      const name = payload.name ?? payload.email.split('@')[0];
+      const id = `${type === 'brand' ? 'b' : 'u'}${Date.now()}`;
+      const handle = `@${name.toLowerCase().replace(/\s+/g, '.')}`;
+      const avatarUrl = payload.picture ?? `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(handle)}`;
+
+      const base = {
+        id, accountType: type, name, handle, avatarUrl,
+        coverUrl: 'https://picsum.photos/seed/300/640/360',
+        location: '', stats: { connections: 0, projects: 0, posts: 0 },
+        skills: [] as string[], status: 'online' as const, email: payload.email, password: '',
+      };
+
+      user = type === 'brand'
+        ? { ...base, role: 'New brand on VibeConnect', bio: 'Just joined VibeConnect — looking for the right creators.', companyName: name, industry: '', budgetRange: '', targetNiches: [] as string[] }
+        : { ...base, role: 'New creator on VibeConnect', bio: 'Just joined VibeConnect.', niche: '', followers: 0, engagementRate: 0, socials: {} };
+
+      users.push(user);
+    }
+
+    res.json({ token: makeToken(user.id), user: publicUser(user) });
+  } catch (err) {
+    console.error('Google sign-in error:', err);
+    res.status(401).json({ message: 'Could not verify Google account. Try again.' });
+  }
+});
+
 // ---------- Users / Profile ----------
 app.get('/api/users/me', requireAuth, (req, res) => {
   const user = users.find((u) => u.id === (req as AuthedRequest).userId)!;
@@ -57,6 +137,27 @@ app.patch('/api/users/me', requireAuth, (req, res) => {
   const user = users.find((u) => u.id === (req as AuthedRequest).userId)!;
   Object.assign(user, req.body);
   res.json(publicUser(user));
+});
+
+app.post('/api/upload', requireAuth, express.raw({ type: 'image/*', limit: '10mb' }), (req, res) => {
+  try {
+    const fileType = req.headers['content-type'] || 'image/jpeg';
+    const ext = fileType === 'image/png' ? '.png' : fileType === 'image/gif' ? '.gif' : '.jpg';
+    const filename = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+    const uploadDir = path.join(__dirname, '../uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const filepath = path.join(uploadDir, filename);
+    fs.writeFileSync(filepath, req.body);
+
+    res.json({ url: `/uploads/${filename}` });
+  } catch (err) {
+    console.error('File upload error:', err);
+    res.status(500).json({ message: 'Failed to upload file' });
+  }
 });
 
 app.get('/api/users/:id', requireAuth, (req, res) => {
@@ -92,11 +193,11 @@ app.get('/api/posts', requireAuth, (req, res) => {
 
 app.post('/api/posts', requireAuth, (req, res) => {
   const viewerId = (req as AuthedRequest).userId;
-  const { content, tag } = req.body ?? {};
+  const { content, tag, imageUrl } = req.body ?? {};
   if (!content) return res.status(400).json({ message: 'Post content is required' });
 
   const post = {
-    id: `p${Date.now()}`, authorId: viewerId, content, tag,
+    id: `p${Date.now()}`, authorId: viewerId, content, tag, imageUrl,
     createdAt: new Date().toISOString(), likes: 0, likedBy: [] as string[], comments: [],
   };
   posts.unshift(post);
@@ -289,55 +390,200 @@ app.get('/api/users/me/analytics', requireAuth, (req, res) => {
   res.json(analytics[viewerId] ?? []);
 });
 
-// ---------- AI Assistant (Claude API) ----------
+// ---------- AI Assistant (Claude + Grok) ----------
+const AI_SYSTEM_PROMPT =
+  'You are the VibeConnect AI Assistant, built into a creator-brand collaboration platform. Help creators with profile tips, content ideas, negotiating rates, and brand-collab etiquette. Help brands with campaign briefs and creator-matching advice. Be concise, practical, and friendly.';
+
 app.post('/api/ai/chat', requireAuth, async (req, res) => {
-  const { messages: chatMessages } = req.body ?? {};
+  const { messages: chatMessages, provider, stream } = req.body ?? {};
   if (!Array.isArray(chatMessages) || chatMessages.length === 0) {
     return res.status(400).json({ message: 'messages array is required' });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const useGrok = provider === 'grok';
+  const apiKey = useGrok ? process.env.XAI_API_KEY : process.env.ANTHROPIC_API_KEY;
+
   if (!apiKey) {
     return res.json({
       role: 'assistant',
-      content:
-        "I'm not connected to Claude yet — the server is missing an ANTHROPIC_API_KEY. Add one to backend/.env and restart the server to enable real AI replies. (For now, here's a placeholder: I'd normally help you with profile tips, campaign ideas, or matching creators to brands here.)",
+      content: useGrok
+        ? "I'm not connected to Grok yet — the server is missing an XAI_API_KEY. Add one to backend/.env and restart the server to enable real Grok replies."
+        : "I'm not connected to Claude yet — the server is missing an ANTHROPIC_API_KEY. Add one to backend/.env and restart the server to enable real Claude replies.",
     });
   }
 
+  const isStreaming = stream === true;
+
   try {
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 600,
-        system:
-          'You are the VibeConnect AI Assistant, built into a creator-brand collaboration platform. Help creators with profile tips, content ideas, negotiating rates, and brand-collab etiquette. Help brands with campaign briefs and creator-matching advice. Be concise, practical, and friendly.',
-        messages: chatMessages,
-      }),
-    });
+    if (useGrok) {
+      const grokRes = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'grok-beta',
+          messages: [{ role: 'system', content: AI_SYSTEM_PROMPT }, ...chatMessages],
+          max_tokens: 1000,
+          stream: isStreaming,
+        }),
+      });
 
-    if (!anthropicRes.ok) {
-      const errBody = await anthropicRes.text();
-      console.error('Anthropic API error:', anthropicRes.status, errBody);
-      return res.status(502).json({ message: 'AI service returned an error. Check your API key and try again.' });
+      if (!grokRes.ok) {
+        const errBody = await grokRes.text();
+        console.error('Grok API error:', grokRes.status, errBody);
+        return res.status(grokRes.status).json({ message: `Grok API error: ${grokRes.statusText}` });
+      }
+
+      if (isStreaming) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        });
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        for await (const chunk of grokRes.body as any) {
+          const text = decoder.decode(chunk, { stream: true });
+          buffer += text;
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (!cleanLine) continue;
+            if (cleanLine === 'data: [DONE]') {
+              res.write('data: [DONE]\n\n');
+              continue;
+            }
+            if (cleanLine.startsWith('data: ')) {
+              try {
+                const parsed = JSON.parse(cleanLine.slice(6));
+                const delta = parsed.choices?.[0]?.delta?.content || '';
+                if (delta) {
+                  res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                }
+              } catch {
+                // Ignore parse errors on partial lines
+              }
+            }
+          }
+        }
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      } else {
+        const data = await grokRes.json();
+        const text = data.choices?.[0]?.message?.content ?? '';
+        return res.json({ role: 'assistant', content: text || "I couldn't generate a response." });
+      }
+    } else {
+      // Claude
+      const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-latest',
+          max_tokens: 1000,
+          system: AI_SYSTEM_PROMPT,
+          messages: chatMessages,
+          stream: isStreaming,
+        }),
+      });
+
+      if (!anthropicRes.ok) {
+        const errBody = await anthropicRes.text();
+        console.error('Anthropic API error:', anthropicRes.status, errBody);
+        return res.status(anthropicRes.status).json({ message: `Claude API error: ${anthropicRes.statusText}` });
+      }
+
+      if (isStreaming) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        });
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        for await (const chunk of anthropicRes.body as any) {
+          const text = decoder.decode(chunk, { stream: true });
+          buffer += text;
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (!cleanLine) continue;
+            if (cleanLine.startsWith('data: ')) {
+              try {
+                const parsed = JSON.parse(cleanLine.slice(6));
+                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                  res.write(`data: ${JSON.stringify({ content: parsed.delta.text })}\n\n`);
+                }
+              } catch {
+                // Ignore
+              }
+            }
+          }
+        }
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      } else {
+        const data = await anthropicRes.json();
+        const text = (data.content ?? [])
+          .map((block: { type: string; text?: string }) => (block.type === 'text' ? block.text : ''))
+          .filter(Boolean)
+          .join('\n');
+        return res.json({ role: 'assistant', content: text || "I couldn't generate a response." });
+      }
     }
-
-    const data = await anthropicRes.json();
-    const text = (data.content ?? [])
-      .map((block: { type: string; text?: string }) => (block.type === 'text' ? block.text : ''))
-      .filter(Boolean)
-      .join('\n');
-
-    res.json({ role: 'assistant', content: text || "I couldn't generate a response — try rephrasing your question." });
   } catch (err) {
     console.error('AI chat error:', err);
-    res.status(502).json({ message: 'Could not reach the AI service. Check your connection and try again.' });
+    res.status(502).json({ message: `Could not reach the ${useGrok ? 'Grok' : 'Claude'} API. Check your connection/keys and try again.` });
+  }
+});
+
+// ---------- Social: real YouTube channel stats (public Data API, no OAuth needed) ----------
+app.get('/api/social/youtube', requireAuth, async (req, res) => {
+  const handle = String(req.query.handle ?? '').replace(/^@/, '');
+  if (!handle) return res.status(400).json({ message: 'handle query param is required' });
+
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    return res.json({ connected: false, message: 'YOUTUBE_API_KEY not set on the server — showing link only.' });
+  }
+
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${encodeURIComponent(`@${handle}`)}&key=${apiKey}`;
+    const ytRes = await fetch(url);
+    if (!ytRes.ok) {
+      const errBody = await ytRes.text();
+      console.error('YouTube API error:', ytRes.status, errBody);
+      return res.status(502).json({ connected: false, message: 'Could not reach the YouTube API.' });
+    }
+    const data = await ytRes.json();
+    const channel = data.items?.[0];
+    if (!channel) return res.json({ connected: false, message: `No public channel found for @${handle}.` });
+
+    res.json({
+      connected: true,
+      title: channel.snippet?.title,
+      thumbnail: channel.snippet?.thumbnails?.default?.url,
+      subscriberCount: Number(channel.statistics?.subscriberCount ?? 0),
+      videoCount: Number(channel.statistics?.videoCount ?? 0),
+      viewCount: Number(channel.statistics?.viewCount ?? 0),
+    });
+  } catch (err) {
+    console.error('YouTube fetch error:', err);
+    res.status(502).json({ connected: false, message: 'Could not reach the YouTube API.' });
   }
 });
 
@@ -348,6 +594,15 @@ app.listen(PORT, () => {
   console.log(`VibeConnect API listening on http://localhost:${PORT}`);
   console.log('Demo login -> email: demo@vibeconnect.dev  password: demo1234');
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.log('Note: ANTHROPIC_API_KEY not set — AI Assistant will reply with a placeholder message.');
+    console.log('Note: ANTHROPIC_API_KEY not set — Claude replies will be a placeholder.');
+  }
+  if (!process.env.XAI_API_KEY) {
+    console.log('Note: XAI_API_KEY not set — Grok replies will be a placeholder.');
+  }
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    console.log('Note: GOOGLE_CLIENT_ID not set — "Continue with Google" will show a setup message instead of signing in.');
+  }
+  if (!process.env.YOUTUBE_API_KEY) {
+    console.log('Note: YOUTUBE_API_KEY not set — live YouTube stats on the profile will be skipped.');
   }
 });

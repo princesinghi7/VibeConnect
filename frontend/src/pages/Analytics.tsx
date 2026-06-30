@@ -5,20 +5,56 @@ import './Analytics.css';
 
 interface Point { month: string; followers: number; engagementRate: number }
 
-function buildPath(points: Point[], key: 'followers' | 'engagementRate', width: number, height: number, pad = 12) {
+const WIDTH = 640;
+const HEIGHT = 220;
+const PAD = 16;
+
+function buildPoints(points: Point[], key: 'followers' | 'engagementRate') {
   const values = points.map((p) => p[key]);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
-  const stepX = (width - pad * 2) / (points.length - 1);
+  const stepX = (WIDTH - PAD * 2) / (points.length - 1);
 
-  return points
-    .map((p, i) => {
-      const x = pad + i * stepX;
-      const y = height - pad - ((p[key] - min) / range) * (height - pad * 2);
-      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-    })
-    .join(' ');
+  return points.map((p, i) => ({
+    x: PAD + i * stepX,
+    y: HEIGHT - PAD - ((p[key] - min) / range) * (HEIGHT - PAD * 2),
+    value: p[key],
+    month: p.month,
+  }));
+}
+
+function AreaChart({ points, color, suffix = '' }: { points: Point[]; color: string; suffix?: string }) {
+  const key = suffix === '%' ? 'engagementRate' : 'followers';
+  const coords = buildPoints(points, key);
+  const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x},${c.y}`).join(' ');
+  const areaPath = `${linePath} L${coords[coords.length - 1].x},${HEIGHT - PAD} L${coords[0].x},${HEIGHT - PAD} Z`;
+  const gradId = `grad-${color.replace(/[^a-z0-9]/gi, '')}`;
+
+  return (
+    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="analytics-svg">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {[0.25, 0.5, 0.75].map((f) => (
+        <line key={f} x1={PAD} x2={WIDTH - PAD} y1={PAD + f * (HEIGHT - PAD * 2)} y2={PAD + f * (HEIGHT - PAD * 2)} className="analytics-grid" />
+      ))}
+
+      <path d={areaPath} fill={`url(#${gradId})`} stroke="none" />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+      {coords.map((c) => (
+        <g key={c.month}>
+          <circle cx={c.x} cy={c.y} r="4" fill="var(--bg)" stroke={color} strokeWidth="2" />
+          <title>{c.month}: {key === 'followers' ? c.value.toLocaleString('en-IN') : `${c.value}%`}</title>
+        </g>
+      ))}
+    </svg>
+  );
 }
 
 export default function Analytics() {
@@ -31,15 +67,18 @@ export default function Analytics() {
   }, []);
 
   if (loading) return <div className="skeleton" style={{ height: 300 }} />;
-
-  const width = 640;
-  const height = 220;
-  const followerPath = buildPath(data, 'followers', width, height);
-  const engagementPath = buildPath(data, 'engagementRate', width, height);
+  if (data.length === 0) return <p className="eyebrow">No analytics data yet.</p>;
 
   const latest = data[data.length - 1];
   const first = data[0];
-  const followerGrowth = first ? (((latest.followers - first.followers) / first.followers) * 100).toFixed(1) : '0';
+  const followerGrowth = (((latest.followers - first.followers) / first.followers) * 100).toFixed(1);
+  const engagementDelta = (latest.engagementRate - first.engagementRate).toFixed(1);
+
+  const platformSplit = [
+    { label: 'Instagram', pct: 58, color: 'var(--accent)' },
+    { label: 'YouTube', pct: 30, color: 'var(--accent-2)' },
+    { label: 'Facebook', pct: 12, color: '#fbbf78' },
+  ];
 
   return (
     <div className="analytics-page">
@@ -49,9 +88,26 @@ export default function Analytics() {
       </div>
 
       <div className="analytics-stats">
-        <div className="glass analytics-stat"><strong>{latest?.followers.toLocaleString('en-IN')}</strong><span>Followers</span></div>
-        <div className="glass analytics-stat"><strong>{latest?.engagementRate}%</strong><span>Engagement rate</span></div>
-        <div className="glass analytics-stat"><strong>+{followerGrowth}%</strong><span>Follower growth</span></div>
+        <div className="glass analytics-stat">
+          <span className="analytics-stat-icon">◎</span>
+          <strong>{latest.followers.toLocaleString('en-IN')}</strong>
+          <span>Followers</span>
+        </div>
+        <div className="glass analytics-stat">
+          <span className="analytics-stat-icon">✦</span>
+          <strong>{latest.engagementRate}%</strong>
+          <span>Engagement rate</span>
+        </div>
+        <div className="glass analytics-stat">
+          <span className="analytics-stat-icon">↗</span>
+          <strong className="analytics-positive">+{followerGrowth}%</strong>
+          <span>Follower growth</span>
+        </div>
+        <div className="glass analytics-stat">
+          <span className="analytics-stat-icon">⚡</span>
+          <strong className="analytics-positive">+{engagementDelta}pp</strong>
+          <span>Engagement change</span>
+        </div>
       </div>
 
       <div className="glass analytics-chart">
@@ -59,28 +115,34 @@ export default function Analytics() {
           <h2>Follower growth</h2>
           <span className="tag">{user?.niche ?? 'Creator'}</span>
         </div>
-        <svg viewBox={`0 0 ${width} ${height}`} className="analytics-svg">
-          <path d={followerPath} fill="none" stroke="var(--accent)" strokeWidth="2.5" />
-          {data.map((p, i) => {
-            const stepX = (width - 24) / (data.length - 1);
-            const x = 12 + i * stepX;
-            return <circle key={p.month} cx={x} cy={12} r="0" />;
-          })}
-        </svg>
-        <div className="analytics-x-labels">
-          {data.map((p) => <span key={p.month}>{p.month}</span>)}
-        </div>
+        <AreaChart points={data} color="var(--accent)" />
+        <div className="analytics-x-labels">{data.map((p) => <span key={p.month}>{p.month}</span>)}</div>
       </div>
 
-      <div className="glass analytics-chart">
-        <div className="analytics-chart-head">
-          <h2>Engagement rate</h2>
+      <div className="analytics-grid-2">
+        <div className="glass analytics-chart">
+          <div className="analytics-chart-head">
+            <h2>Engagement rate</h2>
+          </div>
+          <AreaChart points={data} color="var(--accent-2)" suffix="%" />
+          <div className="analytics-x-labels">{data.map((p) => <span key={p.month}>{p.month}</span>)}</div>
         </div>
-        <svg viewBox={`0 0 ${width} ${height}`} className="analytics-svg">
-          <path d={engagementPath} fill="none" stroke="var(--accent-2)" strokeWidth="2.5" />
-        </svg>
-        <div className="analytics-x-labels">
-          {data.map((p) => <span key={p.month}>{p.month}</span>)}
+
+        <div className="glass analytics-chart">
+          <div className="analytics-chart-head">
+            <h2>Audience by platform</h2>
+          </div>
+          <div className="platform-bars">
+            {platformSplit.map((p) => (
+              <div className="platform-bar-row" key={p.label}>
+                <span className="platform-bar-label">{p.label}</span>
+                <div className="platform-bar-track">
+                  <div className="platform-bar-fill" style={{ width: `${p.pct}%`, background: p.color }} />
+                </div>
+                <span className="platform-bar-pct">{p.pct}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

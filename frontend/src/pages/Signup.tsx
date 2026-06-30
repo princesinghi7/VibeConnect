@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import type { AccountType } from '../api/types';
 import './Auth.css';
 
 export default function Signup() {
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [accountType, setAccountType] = useState<AccountType>('creator');
   const [name, setName] = useState('');
@@ -25,6 +26,16 @@ export default function Signup() {
       setError('Could not create your account. Please try again.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onGoogleCredential(idToken: string) {
+    setError('');
+    try {
+      await loginWithGoogle(idToken, accountType);
+      navigate('/profile');
+    } catch {
+      setError('Could not sign up with Google. Make sure the backend is running with GOOGLE_CLIENT_ID set.');
     }
   }
 
@@ -85,6 +96,10 @@ export default function Signup() {
           <button className="btn btn-primary" style={{ width: '100%', marginTop: 6 }} disabled={busy}>
             {busy ? 'Creating account…' : `Create ${accountType} account`}
           </button>
+
+          <div className="auth-divider"><span>or</span></div>
+
+          <GoogleSignInButton onCredential={onGoogleCredential} />
 
           <p className="auth-switch">
             Already on VibeConnect? <Link to="/login">Sign in</Link>

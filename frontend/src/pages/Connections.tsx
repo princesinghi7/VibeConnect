@@ -20,13 +20,17 @@ export default function Connections() {
     getConnections().then((c) => { setItems(c); setLoading(false); });
   }, []);
 
+  function handleStatusChange(id: string, status: Connection['status']) {
+    setItems((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
+  }
+
   const shown = filter === 'all' ? items : items.filter((c) => c.status === filter);
 
   return (
     <div className="connections-page">
       <div>
         <h1>Connections</h1>
-        <p className="eyebrow">Your network of builders</p>
+        <p className="eyebrow">Your network of creators and brands</p>
       </div>
 
       <div className="conn-filters">
@@ -47,7 +51,7 @@ export default function Connections() {
         </div>
       ) : (
         <div className="conn-grid">
-          {shown.map((c) => <ConnectionCard connection={c} key={c.id} />)}
+          {shown.map((c) => <ConnectionCard connection={c} key={c.id} onStatusChange={handleStatusChange} />)}
           {shown.length === 0 && <p className="eyebrow">No connections in this filter yet.</p>}
         </div>
       )}

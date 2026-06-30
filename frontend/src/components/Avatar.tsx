@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
+
 interface AvatarProps {
-  src: string;
+  src?: string;
   name: string;
   size?: number;
   status?: 'online' | 'building' | 'offline';
@@ -13,6 +15,24 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Avatar({ src, name, size = 40, status, ring = false }: AvatarProps) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
+
+  const initials = name
+    ? name
+        .split(' ')
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'U';
+
+  const showFallback = !src || imgError;
+
   return (
     <span
       style={{
@@ -21,24 +41,47 @@ export default function Avatar({ src, name, size = 40, status, ring = false }: A
         width: size,
         height: size,
         flexShrink: 0,
+        borderRadius: '50%',
+        boxShadow: ring ? '0 0 0 2px var(--bg), 0 0 0 4px var(--accent)' : 'none',
       }}
     >
-      <img
-        src={src}
-        alt={name}
-        width={size}
-        height={size}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          objectFit: 'cover',
-          background: 'var(--surface)',
-          border: ring ? '2px solid var(--bg)' : '1px solid var(--border)',
-          boxShadow: ring ? '0 0 0 2px var(--accent)' : 'none',
-          display: 'block',
-        }}
-      />
+      {showFallback ? (
+        <span
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%)',
+            color: '#07080c',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: Math.max(11, size * 0.36),
+            fontFamily: 'var(--display)',
+            border: '1px solid var(--border)',
+            userSelect: 'none',
+          }}
+        >
+          {initials}
+        </span>
+      ) : (
+        <img
+          src={src}
+          alt={name}
+          onError={() => setImgError(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            background: 'linear-gradient(135deg, var(--accent), var(--surface))',
+            border: '1px solid var(--border)',
+            display: 'block',
+          }}
+        />
+      )}
       {status && (
         <span
           title={status}
@@ -51,6 +94,7 @@ export default function Avatar({ src, name, size = 40, status, ring = false }: A
             borderRadius: '50%',
             background: statusColor[status],
             border: '2px solid var(--bg)',
+            zIndex: 2,
           }}
         />
       )}

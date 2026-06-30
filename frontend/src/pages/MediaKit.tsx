@@ -11,6 +11,12 @@ export default function MediaKit() {
   const [savingRates, setSavingRates] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', brand: 'Personal', metric: '', imageUrl: '' });
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
+
+  function flash(msg: string) {
+    setSavedFlash(msg);
+    setTimeout(() => setSavedFlash(null), 2200);
+  }
 
   useEffect(() => {
     Promise.all([getRateCard(), getPortfolio()]).then(([r, p]) => {
@@ -36,6 +42,7 @@ export default function MediaKit() {
       const saved = await saveRateCard(rateCard);
       setRateCard(saved);
       setEditingRates(false);
+      flash('Rate card saved ✓');
     } finally {
       setSavingRates(false);
     }
@@ -50,6 +57,7 @@ export default function MediaKit() {
     setPortfolio((prev) => [...prev, item]);
     setNewItem({ title: '', brand: 'Personal', metric: '', imageUrl: '' });
     setShowAddItem(false);
+    flash('Added to portfolio ✓');
   }
 
   if (loading) return <div className="skeleton" style={{ height: 300 }} />;
@@ -60,6 +68,8 @@ export default function MediaKit() {
         <h1>Media kit</h1>
         <p className="eyebrow">Your rate card and portfolio — share-ready for brand outreach</p>
       </div>
+
+      {savedFlash && <div className="mediakit-flash">{savedFlash}</div>}
 
       <section className="mediakit-section glass">
         <div className="mediakit-section-head">

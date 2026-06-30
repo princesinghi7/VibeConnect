@@ -2,9 +2,20 @@ export type AccountType = 'creator' | 'brand';
 
 export interface SocialLinks {
   instagram?: string;
+  instagramPostUrl?: string;
   youtube?: string;
   facebook?: string;
   twitter?: string;
+}
+
+export interface YoutubeStats {
+  connected: boolean;
+  message?: string;
+  title?: string;
+  thumbnail?: string;
+  subscriberCount?: number;
+  videoCount?: number;
+  viewCount?: number;
 }
 
 export interface User {
@@ -158,3 +169,5 @@ export interface AiChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
+
+export type AiProvider = 'claude' | 'grok';

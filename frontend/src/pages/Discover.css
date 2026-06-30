@@ -13,6 +13,10 @@
 }
 .discover-filters .btn { padding: 8px 16px; font-size: 13px; }
 
+.discover-disclaimer {
+  opacity: 0.7;
+}
+
 .discover-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

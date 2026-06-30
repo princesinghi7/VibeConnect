@@ -43,6 +43,12 @@ export default function Discover() {
         </div>
       )}
 
+      {!isBrand && (
+        <p className="eyebrow discover-disclaimer">
+          Demo data — campaign details are illustrative. Tap a card to open the brand's real official website.
+        </p>
+      )}
+
       {loading ? (
         <div className="discover-grid">
           {[1, 2, 3, 4].map((i) => <div className="skeleton" style={{ height: 220 }} key={i} />)}

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import './Auth.css';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +26,16 @@ export default function Login() {
     }
   }
 
+  async function onGoogleCredential(idToken: string) {
+    setError('');
+    try {
+      await loginWithGoogle(idToken);
+      navigate('/');
+    } catch {
+      setError('Could not sign in with Google. Make sure the backend is running with GOOGLE_CLIENT_ID set.');
+    }
+  }
+
   return (
     <div className="auth-screen">
       <div className="auth-side">
@@ -42,6 +53,10 @@ export default function Login() {
         <form className="auth-card glass" onSubmit={onSubmit}>
           <h2>Welcome back</h2>
           <p className="eyebrow" style={{ marginBottom: 20 }}>Sign in to continue building</p>
+
+          <GoogleSignInButton onCredential={onGoogleCredential} />
+
+          <div className="auth-divider"><span>or</span></div>
 
           <label className="auth-field">
             <span>Email</span>
