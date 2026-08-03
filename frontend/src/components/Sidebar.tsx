@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import './Sidebar.css';
 
 const baseLinks = [
-  { to: '/', label: 'Dashboard', icon: '◧' },
+  { to: '/dashboard', label: 'Dashboard', icon: '◧' },
   { to: '/feed', label: 'Feed', icon: '✦' },
 ];
 

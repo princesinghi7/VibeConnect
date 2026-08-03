@@ -18,7 +18,7 @@ export default function Login() {
     setError('');
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch {
       setError('Could not sign in. Check your details and try again.');
     } finally {
@@ -30,7 +30,7 @@ export default function Login() {
     setError('');
     try {
       await loginWithGoogle(idToken);
-      navigate('/');
+      navigate('/dashboard');
     } catch {
       setError('Could not sign in with Google. Make sure the backend is running with GOOGLE_CLIENT_ID set.');
     }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 declare global {
   interface Window {
@@ -16,7 +16,9 @@ function loadFacebookSdk(): Promise<void> {
 
   fbScriptPromise = new Promise((resolve) => {
     window.fbAsyncInit = () => {
-      window.FB && resolve();
+      if (window.FB) {
+        resolve();
+      }
     };
     const script = document.createElement('script');
     script.src = `https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v19.0&appId=${APP_ID}`;
@@ -30,15 +32,14 @@ function loadFacebookSdk(): Promise<void> {
 
 export default function FacebookPagePlugin({ pageUrl }: { pageUrl: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [unavailable, setUnavailable] = useState(!APP_ID);
+  const unavailable = !APP_ID;
 
   useEffect(() => {
-    if (!APP_ID) {
-      setUnavailable(true);
-      return;
-    }
+    if (!APP_ID) return;
     loadFacebookSdk().then(() => {
-      if (containerRef.current) window.FB?.XFBML.parse(containerRef.current);
+      if (containerRef.current && window.FB?.XFBML) {
+        window.FB.XFBML.parse(containerRef.current);
+      }
     });
   }, [pageUrl]);
 

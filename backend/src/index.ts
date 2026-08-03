@@ -403,12 +403,25 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
   const useGrok = provider === 'grok';
   const apiKey = useGrok ? process.env.XAI_API_KEY : process.env.ANTHROPIC_API_KEY;
 
+  const fallbackText = useGrok
+    ? "I'm not connected to Grok yet — the server is missing an XAI_API_KEY. Add one to backend/.env and restart the server to enable real Grok replies."
+    : "I'm not connected to Claude yet — the server is missing an ANTHROPIC_API_KEY. Add one to backend/.env and restart the server to enable real Claude replies.";
+
   if (!apiKey) {
+    if (stream === true) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+      res.write(`data: ${JSON.stringify({ content: fallbackText })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
+    }
+
     return res.json({
       role: 'assistant',
-      content: useGrok
-        ? "I'm not connected to Grok yet — the server is missing an XAI_API_KEY. Add one to backend/.env and restart the server to enable real Grok replies."
-        : "I'm not connected to Claude yet — the server is missing an ANTHROPIC_API_KEY. Add one to backend/.env and restart the server to enable real Claude replies.",
+      content: fallbackText,
     });
   }
 

@@ -61,7 +61,7 @@ function loadGoogleScript(): Promise<void> {
 
 export default function GoogleSignInButton({ onCredential }: { onCredential: (idToken: string) => void }) {
   const [showPicker, setShowPicker] = useState(false);
-  const [unavailable, setUnavailable] = useState(!CLIENT_ID);
+  const unavailable = !CLIENT_ID;
   const buttonRef = useRef<HTMLDivElement>(null);
 
   // New Custom Account Form State
@@ -71,10 +71,7 @@ export default function GoogleSignInButton({ onCredential }: { onCredential: (id
   const [showCustomForm, setShowCustomForm] = useState(false);
 
   useEffect(() => {
-    if (!CLIENT_ID) {
-      setUnavailable(true);
-      return;
-    }
+    if (!CLIENT_ID) return;
 
     let cancelled = false;
     loadGoogleScript()
@@ -101,7 +98,9 @@ export default function GoogleSignInButton({ onCredential }: { onCredential: (id
           });
         }
       })
-      .catch(() => setUnavailable(true));
+      .catch(() => {
+        // Ignore a script failure here and render the demo fallback picker.
+      });
 
     return () => { cancelled = true; };
   }, [onCredential]);

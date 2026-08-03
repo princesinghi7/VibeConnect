@@ -157,14 +157,16 @@ export default function AiAssistant() {
       }
 
       const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Missing response body');
+      }
       const decoder = new TextDecoder();
-      let aiText = '';
 
       // Append an empty assistant bubble that we stream content into
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
-        const { done, value } = await reader!.read();
+        const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
@@ -176,13 +178,13 @@ export default function AiAssistant() {
           if (cleanLine === 'data: [DONE]') continue;
           if (cleanLine.startsWith('data: ')) {
             try {
-              const parsed = JSON.parse(cleanLine.slice(6));
+              const parsed = JSON.parse(cleanLine.slice(6)) as { content?: string };
               const textContent = parsed.content;
               if (textContent) {
-                aiText += textContent;
                 setMessages((prev) => {
                   const updated = [...prev];
-                  updated[updated.length - 1] = { role: 'assistant', content: aiText };
+                  const previousText = updated[updated.length - 1]?.content ?? '';
+                  updated[updated.length - 1] = { role: 'assistant', content: `${previousText}${textContent}` };
                   return updated;
                 });
               }
@@ -192,8 +194,8 @@ export default function AiAssistant() {
           }
         }
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
         showStreamError('Generation stopped.');
       } else {
         console.error(err);

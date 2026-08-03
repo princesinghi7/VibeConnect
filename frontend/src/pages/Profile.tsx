@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Avatar from '../components/Avatar';
 import YoutubeStatsCard from '../components/YoutubeStatsCard';
 import InstagramEmbed from '../components/InstagramEmbed';
@@ -16,13 +16,11 @@ function youtubeHandleFromUrl(url?: string): string | null {
 export default function Profile() {
   const { user, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [bio, setBio] = useState(user?.bio ?? '');
+  const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-
-  useEffect(() => setBio(user?.bio ?? ''), [user?.bio]);
 
   if (!user) return null;
 
@@ -88,6 +86,7 @@ export default function Profile() {
     try {
       const updated = await updateProfile({ bio });
       updateUser(updated);
+      setBio(updated.bio ?? '');
       setEditing(false);
       showToast('Bio updated!');
     } catch {
@@ -170,13 +169,13 @@ export default function Profile() {
         <section className="profile-section glass">
           <div className="profile-section-head">
             <h2>About</h2>
-            {!editing && <button className="btn btn-ghost" onClick={() => setEditing(true)}>Edit</button>}
+            {!editing && <button className="btn btn-ghost" onClick={() => { setBio(user.bio ?? ''); setEditing(true); }}>Edit</button>}
           </div>
           {editing ? (
             <>
               <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
               <div className="profile-edit-actions">
-                <button className="btn btn-ghost" onClick={() => { setEditing(false); setBio(user.bio); }}>Cancel</button>
+                <button className="btn btn-ghost" onClick={() => { setEditing(false); setBio(user.bio ?? ''); }}>Cancel</button>
                 <button className="btn btn-primary" onClick={saveBio} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
               </div>
             </>

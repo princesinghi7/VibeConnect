@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface AvatarProps {
   src?: string;
@@ -16,10 +16,6 @@ const statusColor: Record<string, string> = {
 
 export default function Avatar({ src, name, size = 40, status, ring = false }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    setImgError(false);
-  }, [src]);
 
   const initials = name
     ? name
