@@ -2,8 +2,8 @@
 
 :root {
   /* ---- Color tokens ---- */
-  --bg: #07080c;
-  --bg-soft: #0c0e14;
+  --bg: #0b0d14;
+  --bg-soft: #11131d;
   --surface: rgba(255, 255, 255, 0.04);
   --surface-hover: rgba(255, 255, 255, 0.07);
   --border: rgba(255, 255, 255, 0.09);
@@ -13,10 +13,10 @@
   --text-dim: #9aa1b4;
   --text-faint: #5e6478;
 
-  --accent: #6ee7d8;        /* signal teal — "online / building" */
-  --accent-2: #8b8ffb;      /* violet — secondary accent */
-  --accent-soft: rgba(110, 231, 216, 0.12);
-  --accent-2-soft: rgba(139, 143, 251, 0.12);
+  --accent: #ff786b;
+  --accent-2: #ffd166;
+  --accent-soft: rgba(255, 120, 107, 0.14);
+  --accent-2-soft: rgba(255, 209, 102, 0.14);
 
   --danger: #fb7185;
   --warn: #fbbf78;
@@ -51,8 +51,8 @@ html, body {
 
 body {
   background-image:
-    radial-gradient(60% 50% at 15% 0%, rgba(139,143,251,0.10) 0%, transparent 60%),
-    radial-gradient(50% 40% at 100% 10%, rgba(110,231,216,0.08) 0%, transparent 60%);
+    radial-gradient(60% 50% at 15% 0%, rgba(255,120,107,0.12) 0%, transparent 60%),
+    radial-gradient(50% 40% at 100% 10%, rgba(255,209,102,0.09) 0%, transparent 60%);
   background-repeat: no-repeat;
   min-height: 100svh;
 }
@@ -132,7 +132,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
 
 .btn-primary {
   background: var(--grad);
-  color: #07080c;
+  color: #171018;
   box-shadow: 0 6px 24px rgba(110, 231, 216, 0.22);
 }
 .btn-primary:hover { box-shadow: 0 8px 30px rgba(110, 231, 216, 0.34); }

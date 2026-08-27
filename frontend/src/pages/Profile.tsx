@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Avatar from '../components/Avatar';
 import YoutubeStatsCard from '../components/YoutubeStatsCard';
 import InstagramEmbed from '../components/InstagramEmbed';
@@ -21,8 +21,6 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-
-  useEffect(() => setBio(user?.bio ?? ''), [user?.bio]);
 
   if (!user) return null;
 

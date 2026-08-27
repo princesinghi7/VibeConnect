@@ -156,44 +156,50 @@ export default function AiAssistant() {
         throw new Error('API error');
       }
 
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.includes('text/event-stream')) {
+        const reply = (await response.json()) as AiChatMessage;
+        setMessages((prev) => [...prev, reply]);
+        return;
+      }
+
       const reader = response.body?.getReader();
+      if (!reader) throw new Error('AI server returned an empty stream');
       const decoder = new TextDecoder();
       let aiText = '';
+      let buffer = '';
 
-      // Append an empty assistant bubble that we stream content into
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
-      while (true) {
-        const { done, value } = await reader!.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          const cleanLine = line.trim();
-          if (!cleanLine) continue;
-          if (cleanLine === 'data: [DONE]') continue;
-          if (cleanLine.startsWith('data: ')) {
-            try {
-              const parsed = JSON.parse(cleanLine.slice(6));
-              const textContent = parsed.content;
-              if (textContent) {
-                aiText += textContent;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { role: 'assistant', content: aiText };
-                  return updated;
-                });
-              }
-            } catch {
-              // Ignore partial JSON parse errors
-            }
+      const appendChunk = (line: string) => {
+        const cleanLine = line.trim();
+        if (!cleanLine || cleanLine === 'data: [DONE]' || !cleanLine.startsWith('data: ')) return;
+        try {
+          const textContent = (JSON.parse(cleanLine.slice(6)) as { content?: string }).content;
+          if (textContent) {
+            aiText += textContent;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: 'assistant', content: aiText };
+              return updated;
+            });
           }
+        } catch {
+          // Ignore malformed provider events and keep the stream alive.
         }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach(appendChunk);
+        if (done) break;
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+      appendChunk(buffer);
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
         showStreamError('Generation stopped.');
       } else {
         console.error(err);

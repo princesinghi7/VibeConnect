@@ -18,7 +18,6 @@ export default function Discover() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     if (isBrand) {
       getCreators(niche).then((c) => { setCreators(c); setLoading(false); });
     } else {
@@ -36,7 +35,7 @@ export default function Discover() {
       {isBrand && (
         <div className="discover-filters">
           {NICHES.map((n) => (
-            <button key={n} className={`btn ${niche === n ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setNiche(n)}>
+            <button key={n} className={`btn ${niche === n ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setLoading(true); setNiche(n); }}>
               {n === 'all' ? 'All niches' : n}
             </button>
           ))}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface AvatarProps {
   src?: string;
@@ -9,17 +9,13 @@ interface AvatarProps {
 }
 
 const statusColor: Record<string, string> = {
-  online: '#6ee7d8',
-  building: '#fbbf78',
+  online: '#ff786b',
+  building: '#ffd166',
   offline: '#5e6478',
 };
 
 export default function Avatar({ src, name, size = 40, status, ring = false }: AvatarProps) {
-  const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    setImgError(false);
-  }, [src]);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   const initials = name
     ? name
@@ -31,7 +27,7 @@ export default function Avatar({ src, name, size = 40, status, ring = false }: A
         .toUpperCase()
     : 'U';
 
-  const showFallback = !src || imgError;
+  const showFallback = !src || failedSrc === src;
 
   return (
     <span
@@ -69,7 +65,7 @@ export default function Avatar({ src, name, size = 40, status, ring = false }: A
         <img
           src={src}
           alt={name}
-          onError={() => setImgError(true)}
+          onError={() => setFailedSrc(src ?? null)}
           style={{
             width: '100%',
             height: '100%',
