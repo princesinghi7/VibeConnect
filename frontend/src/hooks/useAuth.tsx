@@ -22,8 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (getToken()) {
       services.getProfile('me').then(setUser).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
     }
   }, []);
 
@@ -52,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

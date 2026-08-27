@@ -71,10 +71,7 @@ export default function GoogleSignInButton({ onCredential }: { onCredential: (id
   const [showCustomForm, setShowCustomForm] = useState(false);
 
   useEffect(() => {
-    if (!CLIENT_ID) {
-      setUnavailable(true);
-      return;
-    }
+    if (!CLIENT_ID) return;
 
     let cancelled = false;
     loadGoogleScript()
