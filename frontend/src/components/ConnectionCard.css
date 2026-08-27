@@ -1,0 +1,47 @@
+.conn-card {
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.conn-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.conn-info strong { font-size: 15px; color: var(--text); }
+.conn-handle { font-family: var(--mono); font-size: 12px; color: var(--text-faint); }
+.conn-role { font-size: 13px; color: var(--text-dim); margin: 2px 0 6px; }
+
+.conn-skills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.conn-mutual {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.conn-cancel:hover {
+  border-color: rgba(251,113,133,0.4);
+  color: var(--danger);
+  background: rgba(251,113,133,0.08);
+}
+
+.conn-actions {
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .conn-card { flex-direction: column; }
+  .conn-actions { width: 100%; }
+  .conn-actions .btn { width: 100%; }
+}
