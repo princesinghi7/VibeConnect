@@ -10,52 +10,49 @@ export default function ConnectionCard({
   connection: Connection;
   onStatusChange?: (id: string, status: Connection['status']) => void;
 }) {
-  const [status, setStatus] = useState(connection.status);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  async function act(next: Connection['status']) {
+  const nextStatus: Connection['status'] = connection.status === 'suggested' ? 'pending' : 'suggested';
+
+  async function act() {
+    if (busy) return;
     setBusy(true);
-    setStatus(next);
-    onStatusChange?.(connection.id, next);
+    setError('');
     try {
-      await setConnectionStatus(connection.id, next);
+      await setConnectionStatus(connection.id, nextStatus);
+      onStatusChange?.(connection.id, nextStatus);
+    } catch {
+      setError('Could not update this connection. Please try again.');
     } finally {
       setBusy(false);
     }
   }
 
+  const actionLabel = connection.status === 'connected'
+    ? 'Disconnect'
+    : connection.status === 'pending' ? 'Cancel request' : 'Connect';
+
   return (
-    <div className="conn-card glass">
-      <Avatar src={connection.avatarUrl} name={connection.name} size={56} ring />
+    <article className="conn-card">
+      <div className="conn-card-top">
+        <div className="conn-avatar-wrap"><Avatar src={connection.avatarUrl} name={connection.name} size={58} ring /></div>
+        <span className={`conn-status conn-status-${connection.status}`}><i />{connection.status === 'connected' ? 'Connected' : connection.status === 'pending' ? 'Request sent' : 'Suggested'}</span>
+      </div>
       <div className="conn-info">
-        <strong>{connection.name}</strong>
+        <strong className="conn-name">{connection.name}</strong>
         <span className="conn-handle">{connection.handle}</span>
         <span className="conn-role">{connection.role}</span>
-        <div className="conn-skills">
-          {connection.skills.map((s) => (
-            <span className="tag" key={s}>{s}</span>
-          ))}
-        </div>
-        <span className="conn-mutual">{connection.mutuals} mutual connections</span>
+        {connection.skills.length > 0 && <div className="conn-skills">{connection.skills.slice(0, 3).map((skill) => <span className="conn-skill" key={skill}>{skill}</span>)}{connection.skills.length > 3 && <span className="conn-skill conn-skill-more">+{connection.skills.length - 3}</span>}</div>}
       </div>
-
-      <div className="conn-actions">
-        {status === 'connected' && (
-          <button className="btn btn-ghost" disabled={busy} onClick={() => act('suggested')}>
-            Connected · Disconnect
-          </button>
-        )}
-        {status === 'pending' && (
-          <button className="btn btn-ghost conn-cancel" disabled={busy} onClick={() => act('suggested')}>
-            {busy ? 'Cancelling…' : 'Cancel request'}
-          </button>
-        )}
-        {status === 'suggested' && (
-          <button className="btn btn-primary" disabled={busy} onClick={() => act('pending')}>
-            {busy ? 'Sending…' : 'Connect'}
-          </button>
-        )}
+      <div className="conn-card-footer">
+        <span className="conn-mutual"><span aria-hidden="true">♧</span>{connection.mutuals} mutual connections</span>
+        <button type="button" className={`conn-action ${connection.status === 'suggested' ? 'conn-action-primary' : 'conn-action-secondary'}`} disabled={busy} onClick={() => void act()}>
+          {busy ? 'Updating…' : actionLabel}
+          {connection.status === 'suggested' && !busy && <span aria-hidden="true">＋</span>}
+        </button>
       </div>
-    </div>
+      {error && <p className="conn-action-error" role="alert">{error}</p>}
+    </article>
   );
 }

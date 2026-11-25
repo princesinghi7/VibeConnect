@@ -1,0 +1,14 @@
+OPTIONAL SMALL FIX
+
+The existing addPortfolioItem fallback does not copy the optional `link` property into its optimistic/demo object. If you want portfolio content links to remain visible in demo mode, replace ONLY the existing addPortfolioItem function in frontend/src/api/services.ts with this version:
+
+export async function addPortfolioItem(item: Partial<PortfolioItem>): Promise<PortfolioItem> {
+  const optimistic: PortfolioItem = {
+    id: `pf${Date.now()}`, title: item.title ?? 'Untitled', brand: item.brand ?? 'Personal',
+    imageUrl: item.imageUrl ?? 'https://picsum.photos/seed/500/640/360', metric: item.metric ?? '', link: item.link,
+  };
+  const result = await withFallback(() => api.post<PortfolioItem>('/users/me/portfolio', item), optimistic);
+  const updatedList = [...(lsGet<PortfolioItem[]>('portfolio') ?? mockPortfolio), result];
+  lsSet('portfolio', updatedList);
+  return result;
+}

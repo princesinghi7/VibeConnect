@@ -1,56 +1,7 @@
-.campaign-card {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  text-align: left;
-}
-
-.campaign-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.campaign-head-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-.campaign-head-text strong { font-size: 15px; }
-.campaign-head-text span { font-size: 12px; color: var(--text-faint); }
-
-.campaign-status-open { background: var(--accent-soft); color: var(--accent); border-color: rgba(110,231,216,0.25); }
-.campaign-status-closed { background: rgba(255,255,255,0.06); color: var(--text-faint); }
-
-.campaign-desc { font-size: 13.5px; line-height: 1.5; }
-
-.campaign-meta {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 0;
-}
-.campaign-meta > div { display: flex; flex-direction: column; gap: 2px; }
-.campaign-meta strong { font-size: 13px; }
-
-.campaign-applicants {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.applicant-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-.applicant-row span:nth-child(2) { flex: 1; }
-
-.applicant-status-applied { color: var(--text-dim); }
-.applicant-status-shortlisted { color: var(--accent-2); border-color: rgba(139,143,251,0.3); background: var(--accent-2-soft); }
-.applicant-status-accepted { color: var(--accent); border-color: rgba(110,231,216,0.3); background: var(--accent-soft); }
-.applicant-status-rejected { color: var(--danger); border-color: rgba(251,113,133,0.3); background: rgba(251,113,133,0.1); }
+.campaign-card{display:flex;flex-direction:column;gap:13px;min-width:0;padding:17px;border:1px solid rgba(255,255,255,.085);border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018));box-shadow:0 9px 25px rgba(0,0,0,.11);transition:transform .18s,border-color .18s,box-shadow .18s}.campaign-card:hover{transform:translateY(-2px);border-color:rgba(175,145,245,.25);box-shadow:0 13px 30px rgba(0,0,0,.17)}
+.campaign-card-topline{display:flex;justify-content:space-between;align-items:center;gap:8px}.campaign-status-pill,.campaign-platform-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid rgba(255,255,255,.08);border-radius:99px;color:#a7a0b5;font-size:9px;white-space:nowrap}.campaign-status-pill i{width:6px;height:6px;border-radius:50%;background:#6ed4a0}.campaign-status-pill.is-open{color:#8ddcb1;background:rgba(76,190,130,.07);border-color:rgba(76,190,130,.14)}.campaign-status-pill.is-closed{color:#b6adbd;background:rgba(255,255,255,.035)}.campaign-status-pill.is-closed i{background:#898394}.campaign-platform-pill{color:#c4b2ed;background:rgba(151,117,220,.08);border-color:rgba(151,117,220,.13)}
+.campaign-head{display:flex;align-items:center;gap:11px;min-width:0}.campaign-head-text{display:flex;flex-direction:column;gap:4px;min-width:0}.campaign-head-text h3{margin:0;color:var(--text,#f2eef8);font-size:13px;font-weight:750;line-height:1.4}.campaign-head-text>span{color:#9992a8;font-size:10px}.campaign-desc{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:48px;color:#aaa4b5;font-size:10px;line-height:1.65}.campaign-niche-row{display:flex;gap:6px}.campaign-niche-chip{padding:5px 8px;border-radius:6px;background:rgba(164,132,239,.1);color:#c5b2f5;font-size:9px}
+.campaign-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07)}.campaign-meta>div{display:flex;flex-direction:column;gap:4px;min-width:0}.campaign-meta>div>span{color:#807a90;font-size:9px}.campaign-meta strong{color:#e0dbe9;font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.campaign-card-action{display:flex;flex-direction:column;gap:7px}.campaign-apply-btn{width:100%;padding:10px 12px;border:1px solid rgba(183,155,255,.27);border-radius:9px;background:rgba(135,99,218,.14);color:#d7c7ff;font-size:10px;font-weight:750;cursor:pointer;transition:background .15s}.campaign-apply-btn:hover:not(:disabled){background:rgba(135,99,218,.25)}.campaign-apply-btn:disabled{cursor:default;opacity:.75}.campaign-apply-btn.is-applied{border-color:rgba(92,194,139,.2);background:rgba(92,194,139,.08);color:#91dcb1}.campaign-card-error{color:#ff9aaa;font-size:9px}
+.campaign-applicants{display:flex;flex-direction:column;gap:9px}.campaign-applicants-heading{display:flex;justify-content:space-between;align-items:center}.campaign-applicants-heading strong{font-size:10px;color:#d6d0e0}.campaign-applicants-heading>span{font-size:9px;color:#888196}.applicant-row{display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:rgba(255,255,255,.02)}.applicant-name{flex:1;color:#c4bdce;font-size:10px}.applicant-status{padding:4px 6px;border-radius:5px;background:rgba(255,255,255,.06);color:#aaa2b8;font-size:8px;text-transform:capitalize}.applicant-status-shortlisted,.applicant-status-accepted{color:#8fdab0;background:rgba(73,185,126,.1)}.applicant-status-rejected{color:#ee9ba8;background:rgba(220,89,110,.1)}.campaign-no-applicants{padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.025);color:#8e879c;font-size:9px;line-height:1.5}
+@media(max-width:520px){.campaign-card{padding:14px}.campaign-card-topline{align-items:flex-start}.campaign-meta{gap:9px}}

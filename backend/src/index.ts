@@ -10,6 +10,7 @@ import {
   type AccountType, type RateCardItem, type PortfolioItem,
 } from './data';
 import { makeToken, requireAuth } from './auth';
+import { registerAiRoutes } from './ai';
 
 const app = express();
 app.use(cors());
@@ -390,166 +391,8 @@ app.get('/api/users/me/analytics', requireAuth, (req, res) => {
   res.json(analytics[viewerId] ?? []);
 });
 
-// ---------- AI Assistant (Claude + Grok) ----------
-const AI_SYSTEM_PROMPT =
-  'You are the VibeConnect AI Assistant, built into a creator-brand collaboration platform. Help creators with profile tips, content ideas, negotiating rates, and brand-collab etiquette. Help brands with campaign briefs and creator-matching advice. Be concise, practical, and friendly.';
-
-app.post('/api/ai/chat', requireAuth, async (req, res) => {
-  const { messages: chatMessages, provider, stream } = req.body ?? {};
-  if (!Array.isArray(chatMessages) || chatMessages.length === 0) {
-    return res.status(400).json({ message: 'messages array is required' });
-  }
-
-  const useGrok = provider === 'grok';
-  const apiKey = useGrok ? process.env.XAI_API_KEY : process.env.ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    return res.json({
-      role: 'assistant',
-      content: useGrok
-        ? "I'm not connected to Grok yet — the server is missing an XAI_API_KEY. Add one to backend/.env and restart the server to enable real Grok replies."
-        : "I'm not connected to Claude yet — the server is missing an ANTHROPIC_API_KEY. Add one to backend/.env and restart the server to enable real Claude replies.",
-    });
-  }
-
-  const isStreaming = stream === true;
-
-  try {
-    if (useGrok) {
-      const grokRes = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'grok-beta',
-          messages: [{ role: 'system', content: AI_SYSTEM_PROMPT }, ...chatMessages],
-          max_tokens: 1000,
-          stream: isStreaming,
-        }),
-      });
-
-      if (!grokRes.ok) {
-        const errBody = await grokRes.text();
-        console.error('Grok API error:', grokRes.status, errBody);
-        return res.status(grokRes.status).json({ message: `Grok API error: ${grokRes.statusText}` });
-      }
-
-      if (isStreaming) {
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        });
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        for await (const chunk of grokRes.body as any) {
-          const text = decoder.decode(chunk, { stream: true });
-          buffer += text;
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const cleanLine = line.trim();
-            if (!cleanLine) continue;
-            if (cleanLine === 'data: [DONE]') {
-              res.write('data: [DONE]\n\n');
-              continue;
-            }
-            if (cleanLine.startsWith('data: ')) {
-              try {
-                const parsed = JSON.parse(cleanLine.slice(6));
-                const delta = parsed.choices?.[0]?.delta?.content || '';
-                if (delta) {
-                  res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-                }
-              } catch {
-                // Ignore parse errors on partial lines
-              }
-            }
-          }
-        }
-        res.write('data: [DONE]\n\n');
-        return res.end();
-      } else {
-        const data = await grokRes.json();
-        const text = data.choices?.[0]?.message?.content ?? '';
-        return res.json({ role: 'assistant', content: text || "I couldn't generate a response." });
-      }
-    } else {
-      // Claude
-      const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-latest',
-          max_tokens: 1000,
-          system: AI_SYSTEM_PROMPT,
-          messages: chatMessages,
-          stream: isStreaming,
-        }),
-      });
-
-      if (!anthropicRes.ok) {
-        const errBody = await anthropicRes.text();
-        console.error('Anthropic API error:', anthropicRes.status, errBody);
-        return res.status(anthropicRes.status).json({ message: `Claude API error: ${anthropicRes.statusText}` });
-      }
-
-      if (isStreaming) {
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        });
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        for await (const chunk of anthropicRes.body as any) {
-          const text = decoder.decode(chunk, { stream: true });
-          buffer += text;
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const cleanLine = line.trim();
-            if (!cleanLine) continue;
-            if (cleanLine.startsWith('data: ')) {
-              try {
-                const parsed = JSON.parse(cleanLine.slice(6));
-                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                  res.write(`data: ${JSON.stringify({ content: parsed.delta.text })}\n\n`);
-                }
-              } catch {
-                // Ignore
-              }
-            }
-          }
-        }
-        res.write('data: [DONE]\n\n');
-        return res.end();
-      } else {
-        const data = await anthropicRes.json();
-        const text = (data.content ?? [])
-          .map((block: { type: string; text?: string }) => (block.type === 'text' ? block.text : ''))
-          .filter(Boolean)
-          .join('\n');
-        return res.json({ role: 'assistant', content: text || "I couldn't generate a response." });
-      }
-    }
-  } catch (err) {
-    console.error('AI chat error:', err);
-    res.status(502).json({ message: `Could not reach the ${useGrok ? 'Grok' : 'Claude'} API. Check your connection/keys and try again.` });
-  }
-});
+// ---------- AI Assistant ----------
+registerAiRoutes(app, requireAuth);
 
 // ---------- Social: real YouTube channel stats (public Data API, no OAuth needed) ----------
 app.get('/api/social/youtube', requireAuth, async (req, res) => {
@@ -596,8 +439,8 @@ app.listen(PORT, () => {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.log('Note: ANTHROPIC_API_KEY not set — Claude replies will be a placeholder.');
   }
-  if (!process.env.XAI_API_KEY) {
-    console.log('Note: XAI_API_KEY not set — Grok replies will be a placeholder.');
+  if (!process.env.XAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    console.log('Note: No AI provider key configured — add XAI_API_KEY or ANTHROPIC_API_KEY to enable the AI Assistant.');
   }
   if (!process.env.GOOGLE_CLIENT_ID) {
     console.log('Note: GOOGLE_CLIENT_ID not set — "Continue with Google" will show a setup message instead of signing in.');
