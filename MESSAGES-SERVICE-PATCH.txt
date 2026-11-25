@@ -1,0 +1,34 @@
+Replace the existing // ---- Messages ---- section in frontend/src/api/services.ts with this code:
+
+// ---- Messages ----
+export async function getThreads(): Promise<ChatThread[]> {
+  return withFallback(
+    () => api.get<ChatThread[]>('/messages/threads'),
+    () => lsGet<ChatThread[]>('messages:threads') ?? mockThreads,
+  );
+}
+
+export async function getMessages(threadId: string): Promise<ChatMessage[]> {
+  return withFallback(
+    () => api.get<ChatMessage[]>(`/messages/threads/${threadId}`),
+    () => lsGet<Record<string, ChatMessage[]>>('messages:items')?.[threadId] ?? mockMessages[threadId] ?? [],
+  );
+}
+
+export async function sendMessage(threadId: string, content: string): Promise<ChatMessage> {
+  const optimistic: ChatMessage = { id: `m${Date.now()}`, threadId, fromMe: true, content, createdAt: new Date().toISOString() };
+  return withFallback(
+    () => api.post<ChatMessage>(`/messages/threads/${threadId}`, { content }),
+    () => {
+      const allMessages = lsGet<Record<string, ChatMessage[]>>('messages:items') ?? { ...mockMessages };
+      allMessages[threadId] = [...(allMessages[threadId] ?? mockMessages[threadId] ?? []), optimistic];
+      lsSet('messages:items', allMessages);
+      const threads = lsGet<ChatThread[]>('messages:threads') ?? mockThreads;
+      lsSet('messages:threads', threads.map((thread) => thread.id === threadId
+        ? { ...thread, lastMessage: content, lastMessageAt: optimistic.createdAt }
+        : thread));
+      return optimistic;
+    },
+  );
+}
+

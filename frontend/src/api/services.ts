@@ -265,15 +265,7 @@ export async function getAnalytics() {
 }
 
 // ---- AI Assistant (Claude / Grok) ----
-export async function sendAiMessage(history: AiChatMessage[], provider: AiProvider = 'claude'): Promise<AiChatMessage> {
-  return withFallback(
-    () => api.post<AiChatMessage>('/ai/chat', { messages: history, provider }),
-    () => ({
-      role: 'assistant' as const,
-      content:
-        provider === 'grok'
-          ? "I'm running in demo mode right now (no backend connected), so I can't give a live Grok reply — once the backend is running with an XAI_API_KEY set, I'll answer for real."
-          : "I'm running in demo mode right now (no backend connected), so I can't give a live Claude reply — once the backend is running with an ANTHROPIC_API_KEY set, I'll answer for real. In the meantime: for profile tips, lead with your niche and your best metric in the bio; for campaign briefs, always include deliverables, deadline, and budget upfront.",
-    }),
-  );
+export async function sendAiMessage(history: AiChatMessage[], provider: AiProvider = 'grok'): Promise<AiChatMessage> {
+  // AI responses must never silently fall back to mock text: surface API/configuration errors.
+  return api.post<AiChatMessage>('/ai/chat', { messages: history, provider, stream: false });
 }

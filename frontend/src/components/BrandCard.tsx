@@ -1,65 +1,46 @@
 import Avatar from './Avatar';
 import type { BrandCard as BrandCardType } from '../api/types';
-import './DiscoveryCard.css';
 
 function domainFromUrl(url?: string) {
   if (!url) return null;
-  try {
-    return new URL(url).hostname.replace('www.', '');
-  } catch {
-    return null;
-  }
+  try { const parsed = new URL(url); return ['https:', 'http:'].includes(parsed.protocol) ? parsed.hostname.replace(/^www\./, '') : null; } catch { return null; }
 }
 
-export default function BrandCard({ brand }: { brand: BrandCardType }) {
+export default function BrandCard({
+  brand,
+  isSaved = false,
+  onSave,
+}: {
+  brand: BrandCardType;
+  isSaved?: boolean;
+  onSave?: () => void;
+}) {
   const domain = domainFromUrl(brand.website);
-
-  function openSite() {
-    if (brand.website) window.open(brand.website, '_blank', 'noopener,noreferrer');
-  }
+  const safeWebsite = domain ? brand.website : undefined;
 
   return (
-    <div
-      className="brand-card glass"
-      role={brand.website ? 'link' : undefined}
-      tabIndex={brand.website ? 0 : undefined}
-      onClick={openSite}
-      onKeyDown={(e) => { if (e.key === 'Enter') openSite(); }}
-    >
-      <div className="brand-card-banner" />
-
-      <div className="brand-card-body">
-        <div className="discovery-head">
-          <Avatar src={brand.avatarUrl} name={brand.companyName} size={56} ring />
-          <div className="discovery-info">
-            <strong className="brand-name-row">
-              {brand.companyName}
-              <span className="verified-badge" title="Verified brand">✓</span>
-            </strong>
-            <span className="discovery-handle">{brand.industry}</span>
-          </div>
-        </div>
-
-        <p className="discovery-bio">{brand.bio}</p>
-
-        <div className="discovery-niches">
-          {brand.targetNiches.map((n) => <span className="tag" key={n}>{n}</span>)}
-        </div>
-
-        <div className="discovery-budget">
-          <span className="eyebrow">Typical budget</span>
-          <strong>{brand.budgetRange}</strong>
-        </div>
-
-        {brand.website && (
-          <button
-            className="btn btn-ghost brand-visit-btn"
-            onClick={(e) => { e.stopPropagation(); openSite(); }}
-          >
-            Visit {domain ?? 'website'} ↗
-          </button>
-        )}
+    <article className="discover-brand-card">
+      <div className="discover-brand-cover">
+        <span className="discover-brand-cover-glow" />
+        <span className="discover-brand-industry">{brand.industry || 'Brand partner'}</span>
+        {onSave && <button type="button" className={`discover-brand-save ${isSaved ? 'saved' : ''}`} onClick={onSave} aria-label={isSaved ? `Remove ${brand.companyName} from saved brands` : `Save ${brand.companyName}`} aria-pressed={isSaved}><span>{isSaved ? '♥' : '♡'}</span></button>}
       </div>
-    </div>
+      <div className="discover-brand-content">
+        <div className="discover-brand-identity">
+          <Avatar src={brand.avatarUrl} name={brand.companyName} size={58} ring />
+          <div className="discover-brand-title"><h3>{brand.companyName}</h3><span>{domain ?? 'Explore brand profile'}</span></div>
+          <span className="discover-brand-mark" title="Brand listing">✦</span>
+        </div>
+        <p className="discover-brand-bio">{brand.bio}</p>
+        <div className="discover-brand-tags" aria-label="Target creator niches">
+          {brand.targetNiches.slice(0, 3).map((niche) => <span key={niche}>{niche}</span>)}
+          {brand.targetNiches.length > 3 && <span>+{brand.targetNiches.length - 3}</span>}
+        </div>
+        <div className="discover-brand-budget"><span>Typical campaign budget</span><strong>{brand.budgetRange || 'Contact brand for details'}</strong></div>
+        <div className="discover-brand-actions">
+          {safeWebsite ? <a className="discover-brand-visit" href={safeWebsite} target="_blank" rel="noopener noreferrer">Visit official website <span aria-hidden="true">↗</span></a> : <span className="discover-brand-no-site">Website not provided</span>}
+        </div>
+      </div>
+    </article>
   );
 }

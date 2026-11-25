@@ -1,0 +1,60 @@
+VIBECONNECT AI ASSISTANT — PROFESSIONAL UPGRADE
+
+WHAT CHANGED
+- Rebuilt the AI Assistant as a responsive, ChatGPT-style conversational workspace.
+- Natural English, Hindi and Hinglish replies are requested by the server system prompt.
+- Streaming responses, stop generation, regenerate, copy response/code, and Markdown/code formatting.
+- New chat, recent conversation list, delete conversation, and browser-local conversation persistence.
+- Provider status endpoint so the UI can tell whether Grok/Claude is configured.
+- Grok uses xAI's Responses API with grok-4.7; Claude uses Anthropic Messages API with claude-sonnet-4-6.
+- API keys remain on the backend. No API key is sent to the browser.
+- Server validates message history, limits payload size, applies a basic per-user request limit, handles upstream errors, and streams SSE events.
+- AI requests no longer silently return mock/demo answers when the provider is unavailable.
+- No new npm dependency is required.
+
+FILES TO REPLACE (keep the same folders)
+1. frontend/src/pages/AiAssistant.tsx
+2. frontend/src/pages/AiAssistant.css
+3. frontend/src/api/services.ts
+4. backend/src/index.ts
+
+NEW FILE TO ADD
+5. backend/src/ai.ts
+
+ENVIRONMENT CONFIGURATION
+Open backend/.env. Keep your existing values and add/update these variables:
+
+PORT=4000
+XAI_API_KEY=your_xai_api_key
+XAI_MODEL=grok-4.7
+AI_DEFAULT_PROVIDER=grok
+ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_MODEL=claude-sonnet-4-6
+
+At least one provider key is required. For the default Grok option, XAI_API_KEY is required.
+Do not put these keys in frontend/.env, React code, GitHub, or screenshots.
+If you only have a Grok key, the Grok option will work and Claude will show Setup needed. If you only have a Claude key, select Claude in the model dropdown.
+
+RUN LOCALLY (two terminals)
+Terminal 1:
+  cd backend
+  npm install
+  npm run dev
+
+Terminal 2:
+  cd frontend
+  npm install
+  npm run dev
+
+Open the Vite URL shown in Terminal 2, sign in, and open AI Assistant.
+
+IMPORTANT NOTES
+- Conversation history is stored in this browser's localStorage on this device; it is not synced across devices and is not stored in the backend database.
+- This is text chat with streaming, not live voice/audio calling.
+- The current project authentication is explicitly demo-grade (see backend/src/auth.ts). Do not expose this deployment publicly with real user data until authentication, persistent storage, rate limiting, and production security are upgraded.
+- API usage is billed by the selected AI provider. Check the provider's pricing and set account spending limits.
+
+API REFERENCES
+xAI Responses API: https://docs.x.ai/developers/rest-api-reference/inference
+xAI model/streaming guidance: https://docs.x.ai/developers/model-capabilities/text/streaming
+Anthropic Messages API: https://platform.claude.com/docs/en/api/messages
